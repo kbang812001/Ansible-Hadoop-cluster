@@ -1,0 +1,61 @@
+- hosts: Datanode
+  vars_prompt:
+  - name: datanode_dir
+    prompt: "Enter datanode directory:"
+    private: no
+  - name: Namenode_IP
+    private: no
+    prompt: "Enter namenode IP:"
+
+  tasks:
+  - name: "Copying Hadoop software"
+    copy:
+        src: "/root/hadoop-1.2.1-1.x86_64.rpm"
+        dest: "/root/"
+
+  - name: "Copying Java software"
+    copy:
+        src: "/root/jdk-8u171-linux-x64.rpm"
+        dest: "/root/"
+
+  - name: "Hadoop installation"
+    shell: "rpm -ivh hadoop-1.2.1-1.x86_64.rpm --force"
+    register: hadoop
+    ignore_errors: yes
+  - name: "Installing hadoop"
+    debug:
+       var: hadoop.stdout 
+
+  - name: "Java installation"
+    shell: "rpm -ivh jdk-8u171-linux-x64.rpm"
+    register: java
+    ignore_errors: yes
+  - name: "Installing java"
+    debug:
+       var: java.stdout
+
+  - name: "Create Directory"
+    file:
+      state: directory
+      path: "{{datanode_dir}}"
+  - name: "hdfs-site.xml configuration"
+    blockinfile:
+      path: "/etc/hadoop/hdfs-site.xml"
+      insertafter: "<configuration>"
+      block: 
+        <property>
+        <name>dfs.data.dir</name>
+        <value>{{datanode_dir}}</value>
+        </property>
+  - name: "core-site.xml configuration"
+    blockinfile:
+      path: "/etc/hadoop/core-site.xml"  
+      insertafter: "<configuration>"
+      block:  
+        <property>
+        <name>fs.default.name</name>
+        <value>hdfs://{{Namenode_IP}}:9001</value>
+        </property>
+  - name: "starting datanode service"
+    command: "hadoop-daemon.sh start datanode"
+
